@@ -1,17 +1,21 @@
 package updo
 
 import (
+	"log"
 	"io"
 	"context"
 	"time"
 	"fmt"
+	"strings"
+	"unicode"
 
 	"golang.org/x/sync/errgroup"
 )
 
 func CleanKey(path string) string {
-	// TODO: remove leading ../
-	return path
+	return strings.TrimLeftFunc(path, func(r rune) bool {
+		return !unicode.IsLetter(r)
+	})
 }
 
 type Uploader struct {
@@ -69,6 +73,8 @@ func (u Uploader) Upload(ctx context.Context, data ...NamedData) error {
 
 	c := make(chan uploadResult, len(data))
 	for _, v := range data {
+		log.Printf("updo: %q: uploading", v.Key)
+
 		// Concurrency is not upper bounded!
 		go u.uploadOne(ctx, v, c)
 	}
@@ -77,6 +83,7 @@ func (u Uploader) Upload(ctx context.Context, data ...NamedData) error {
 		if err := res.Err; err != nil {
 			return fmt.Errorf("upload %q: %w", res.Input.Key, err)
 		}
+		log.Printf("updo: %q: uploaded in %v", res.Input.Key, res.Elapsed)
 	}
 	return nil
 }

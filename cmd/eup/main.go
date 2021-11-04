@@ -11,10 +11,30 @@ import (
 )
 
 var (
-	publicKey = flag.String("r", "", "Encrypt to the specified recipient. Required")
+	publicKey = flag.String("r", "", "Encrypt to the specified recipient")
+	publicKeyFile = flag.String("R", "", "Encrypt to the specified recipient file")
 )
 
+func readPublicKey() (string, error) {
+	if *publicKey != "" {
+		return *publicKey, nil
+	}
+	if *publicKeyFile == "" {
+		return "", fmt.Errorf("at least -r or -R must be specified")
+	}
+	data, err := os.ReadFile(*publicKeyFile)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
 func Main(ctx context.Context, paths []string) error {
+	key, err := readPublicKey()
+	if err != nil {
+		return err
+	}
+
 	bucket, err := aws.NewBucket()
 	if err != nil {
 		return err
@@ -32,7 +52,7 @@ func Main(ctx context.Context, paths []string) error {
 		}
 	}
 
-	upl := updo.NewUploader(bucket, *publicKey)
+	upl := updo.NewUploader(bucket, key)
 	return upl.Upload(ctx, files...)
 }
 

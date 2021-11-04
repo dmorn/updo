@@ -62,7 +62,7 @@ func TestUpload(t *testing.T) {
 			Key: "cba",
 		},
 	}
-	
+
 	t.Run("upload", func(t *testing.T) {
 		if err := upl.Upload(context.Background(), data...); err != nil {
 			t.Fatal(err)
@@ -83,4 +83,23 @@ func TestUpload(t *testing.T) {
 	})
 
 	os.RemoveAll(workPath)
+}
+
+func TestCleanKey(t *testing.T) {
+	t.Parallel()
+	tt := []struct{
+		Input string
+		Want string
+	}{
+		{"hello.go", "hello.go"},
+		{"", ""},
+		{"././././file.ex", "file.ex"},
+	}
+
+	for _, v := range tt {
+		have := updo.CleanKey(v.Input)
+		if have != v.Want {
+			t.Fatalf("have: %q, want: %q", have, v.Want)
+		}
+	}
 }
