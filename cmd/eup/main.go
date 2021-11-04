@@ -5,6 +5,8 @@ import (
 	"os"
 	"context"
 	"fmt"
+	"os/signal"
+	"syscall"
 
 	"github.com/jecoz/updo"
 	"github.com/jecoz/updo/aws"
@@ -58,7 +60,18 @@ func Main(ctx context.Context, paths []string) error {
 
 func main() {
 	flag.Parse()
-	if err := Main(context.Background(), flag.Args()); err != nil {
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigch
+		cancel()
+	}()
+
+	if err := Main(ctx, flag.Args()); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", os.Args[0], err)
 		os.Exit(1)
 	}
